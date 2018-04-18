@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <iostream>
+#include <sys/wait.h>
 #include <string.h>
 #include <string>
 #include <stdio.h>
@@ -40,6 +41,12 @@ void ProcessSetupFile(SetupData &);
 
 void CreateHandlers();
 
+void LogStart(Log &, SetupData &);
+
+void LogCommand(Message, Log &);
+
+void LogEnd(Log &);
+
 void PrintError(int &, SetupData &);
 
 // readn( ): reads n bytes from file descriptor fd
@@ -63,6 +70,8 @@ SafeQueue myQueues [4];
 pthread_t threads [5];
 int pipeLogger[2];
 fstream f;
+Log *log;
+SetupData *data;
 
 int main(int argc, char **argv) {
     int sockdesc;
@@ -90,9 +99,11 @@ int main(int argc, char **argv) {
                 break;
         }; // switch
     } // while
-    SetupData data(dashP, dashS);
-    ProcessSetupFile(data);
-    strcpy(portnum, data.getPortNumber().c_str());
+    data = new SetupData(dashP, dashS);
+    ProcessSetupFile(*data);
+    strcpy(portnum, data->getPortNumber().c_str());
+    log = new Log(data->getLogfilename());
+    LogStart(*log, *data);
     system("mkdir \"./keys\" >> /dev/null 2>&1");
 
     // This number is hard-coded for simplicity
@@ -159,8 +170,6 @@ int main(int argc, char **argv) {
             cout << "After create" << endl;
         }
     } // for
-
-    return 0;
 }
 /////////////////////////////////////////////////////////
 //                  Pthreads Methods                   //
@@ -198,7 +207,7 @@ void *runPutStore(void *) {
         string str = "./keys/" + string(m.key);
         const char *k = str.c_str();
         bool suc = CreateFile(f, k, m);
-        if (suc == false) {
+        if (!suc) {
             newPayload = "(PUT_STORE) DUPLICATE key: " + string(m.key);
             strcpy(m.payload, newPayload.c_str());
         } else {
@@ -238,6 +247,7 @@ void *runSearch(void *) {
             newPayload = "(SEARCH) PAYLOAD AT KEY " + string(m.key) + " IS " + str;
         }
         strcpy(m.payload, newPayload.c_str());
+        https://github.com/burnettes56/hw5.git
         myQueues[0].Enqueue(m);
     }
     cout << "Search server has received 'quit' command, killing process." << endl;;
@@ -285,9 +295,6 @@ void *runReturn(void *arg) {
     pthread_exit(0);
 }
 
-/////////////////////////////////////////////////////////
-//              end of Pthreads Methods                //
-/////////////////////////////////////////////////////////
 
 /// handles a single request from client
 /// \param arg
@@ -303,32 +310,44 @@ void *handleRequest(void *arg) {
     cout << "Server thread, connection = " << connection << endl;
 
     //screen buffer
-    cout << "\n\nStarting Command Processor...\n\n";
+    cout << "\n\nStarting Command Processor...\n";
+    cout << "Spinning Command Threads...\n\n";
 
+    /////////////////////////////////////////////
+    //     Child Code/Logger Thread Handler    //
+    /////////////////////////////////////////////
 
-    // Receive a message
-    // Note: the next two lines are alternate methods for reading from
-    // the socket.
-    //value = recv(connection, buffer, 20, 0);
-    //value = read(connection, buffer, BUFFERSIZE);
-    value = readn(connection, (char*)&msgFromServer, sizeof(Message));
-    if (value < 0) {
-        cout << "Error on recv" << endl;
+    int forkMe = fork();
+    if (forkMe < 0) {
+        cout << "\nlogger fork failed to initalize. Please try again!" << endl;
         exit(0);
-    } else if (value == 0) {
-        cout << "End of transmission" << endl;
+    } else if (forkMe == 0) {
+        LogStart(*log, *data);
+        //fork success
+        while (msgFromServer.command != 'q' && msgFromServer.command != 'Q') {
+            read(pipeLogger[0], (char *) &msgFromServer, sizeof(Message));
+            cout << "\nLog server has logged msg #" << msgFromServer.id << " key: " << msgFromServer.key
+                 << ", Payload: " << msgFromServer.payload;
+            LogCommand(msgFromServer, *log);
+        }
+        //q or Q has been received so quit and close pipe
+        cout << "Log server has received 'quit' command, killing process " << endl;
+        close(pipeLogger[0]);
+        close(pipeLogger[1]);
+        LogEnd(*log);
         exit(0);
-    }
-    //create all commands handler threads
-    pthread_create(&threads[1], NULL, runReturn, (void *) &connection);                      //initialize return thread
-    CreateHandlers();
-    cout << "Server received Message with ID: " << msgFromServer.id << " Sending to Command Processor." << endl;
-    SendToHandler(msgFromServer);
+    } else {
 
-    // Continue until the message is "quit"
-    while (msgFromServer.command != 'q' && msgFromServer.command != 'Q') {
-        // Get the next message
-        value = readn(connection, (char*)&msgFromServer, sizeof(Message));
+        /////////////////////////////////////////////
+        //     Parent Code/Main Thread Handler     //
+        /////////////////////////////////////////////
+
+        // Receive a message
+        // Note: the next two lines are alternate methods for reading from
+        // the socket.
+        //value = recv(connection, buffer, 20, 0);
+        //value = read(connection, buffer, BUFFERSIZE);
+        value = readn(connection, (char *) &msgFromServer, sizeof(Message));
         if (value < 0) {
             cout << "Error on recv" << endl;
             exit(0);
@@ -336,19 +355,43 @@ void *handleRequest(void *arg) {
             cout << "End of transmission" << endl;
             exit(0);
         }
+        //create all commands handler threads
+        pthread_create(&threads[1], NULL, runReturn, (void *) &connection);                  //initialize return thread
+        CreateHandlers();
         cout << "Server received Message with ID: " << msgFromServer.id << " Sending to Command Processor." << endl;
         SendToHandler(msgFromServer);
-    } // while
-    // Close the socket
 
-    close(connection);
-    pthread_join(threads[1], NULL);
-    pthread_join(threads[2], NULL);
-    pthread_join(threads[3], NULL);
-    pthread_join(threads[4], NULL);
-    cout << "\n\nwe ended" << endl;
+        // Continue until the message command is q/Q(quit all servers)
+        while (msgFromServer.command != 'q' && msgFromServer.command != 'Q') {
+            // Get the next message
+            value = readn(connection, (char *) &msgFromServer, sizeof(Message));
+            if (value < 0) {
+                cout << "Error on recv" << endl;
+                exit(0);
+            } else if (value == 0) {
+                cout << "End of transmission" << endl;
+                exit(0);
+            }
+            cout << "Server received Message with ID: " << msgFromServer.id << " Sending to Command Processor." << endl;
+            SendToHandler(msgFromServer);
+        } // while
+        // Close the socket
+
+        close(connection);
+        pthread_join(threads[1], NULL);
+        pthread_join(threads[2], NULL);
+        pthread_join(threads[3], NULL);
+        pthread_join(threads[4], NULL);
+    }
+    wait(&forkMe);
+    cout << "\n\nwe ended\n" << endl;
     pthread_exit(0);
 }
+
+/////////////////////////////////////////////////////////
+//              end of Pthreads Methods                //
+/////////////////////////////////////////////////////////
+
 /// Creates all commands handlers threads
 /// \return void
 void CreateHandlers() {
@@ -362,6 +405,8 @@ void CreateHandlers() {
 /// \param Message m
 /// \return void
 void SendToHandler(Message msg) {
+    LogCommand(msg, *log);
+    write(pipeLogger[1], (char *) &msg, sizeof(Message));
     switch (msg.command) {
         //send message to put store server
         case 'P':
@@ -431,6 +476,53 @@ void PrintError(int &e, SetupData &setup) {
     string errorCode = setup.error(e);
     cout << "Error Code: " << errorCode << endl;
 }
+
+//
+//opens the log file for logging
+//
+void LogStart(Log &l, SetupData &s) {
+    int success = l.open();
+    if (success != 0) {
+        cout << "Could not open set up file! Please check data and try again." << endl;
+        exit(0);
+    } else {
+        string stringData =
+                "\nLog File: " + s.getLogfilename()
+                + "\nCommand File : " + s.getCommandfilename()
+                + "\nUsername: " + s.getUsername()
+                + "\nPort Number: " + s.getPortNumber();
+        l.writeLogRecord(stringData);
+    }
+}
+
+//
+//log command file data
+//
+void LogCommand(Message m, Log &l) {
+    string stringData =
+            string("\nCommand: ") + m.command
+            + "\nKey: " + m.key
+            + "\nPayload: " + m.payload;
+    l.writeLogRecord(stringData);
+}
+
+//
+//closes the log file
+//
+void LogEnd(Log &l) {
+    int success = l.close();
+    if (success != 0) {
+        cout << "Could not close set up file! Please check data and try again." << endl;
+        exit(0);
+    }
+}
+
+
+//This method was not implemented by Hayden Burnette
+//  but was provided by Dr.Martin Barrett at ETSU
+//  The comments below are comments from Dr. Barrett
+
+
 /* Adapted from Stevens, Unix Network Programming, v.1 */
 /* include readn */
 
