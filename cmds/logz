@@ -1,0 +1,78 @@
+BEGIN
+Log File: logz
+Command File : commands
+Username: someuser
+
+Command: p
+Key: frog
+Payload: green slimy thing
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: p
+Key: toad
+Payload: green slimy thing, but its not a frog
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: p
+Key: fox
+Payload: lazy and jumps over dogs
+
+Command: p
+Key: cheetah
+Payload: damn that thing is fast
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: p
+Key: elephant
+Payload: is very big
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: p
+Key: fox
+Payload: lazy and jumps over dogs
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: p
+Key: tazmanian
+Payload: loonney toon
+
+Command: n
+Key: this info
+Payload: means nothing
+
+Command: s
+Key: toad
+Payload: many
+
+Command: s
+Key: fox
+Payload: many
+
+Command: s
+Key: notFound
+Payload: many
+
+Command: s
+Key: cheetah
+Payload: many
+
+Command: q
+Key: you
+Payload: need to quit
+END Sun Apr 15 23:40:20 2018
+
