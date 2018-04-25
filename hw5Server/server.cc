@@ -1,4 +1,22 @@
-
+/*
+ * Author:  Hayden Burnette
+ * Date  :  4/18/2018
+ * Name  :  server.cc
+ * Purpose:
+ *      The purpose of server.cc is to
+ *      drive the server end of our
+ *      socket program. It will receive
+ *      a message from the socket sent
+ *      from the client. The server will then
+ *      send off the command to the appropriate
+ *      command handler process. The command
+ *      handlers are PutStore, Search, and Number.
+ *      The command handler will then enqueue a
+ *      message to the return server to be sent
+ *      back to client
+ *
+ * Modified: 4/25/2018
+ */
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>

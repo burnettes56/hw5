@@ -1,9 +1,21 @@
-
-/*                                          */
-/* Author: Hayden Burnette                  */
-/* Date  : 2/04/2018                        */
-/*                                          */
-/*                                          */
+/*
+ * Author:  Hayden Burnette
+ * Date  :  2/04/2018
+ * Name  :  SetupData.cc
+ * Purpose:
+ *      The purpose of SetupData.cc
+ *      is to read and processes
+ *      a setup file to determine
+ *      the program environment for
+ *      our server. The setup file
+ *      contains content like
+ *      the username, the path
+ *      to the setup file, the name
+ *      of the setup, and the port number
+ *      for the server.
+ *
+ * Modified: 4/25/2018
+ */
 
 #include <string>
 #include <fstream>

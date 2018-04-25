@@ -1,6 +1,17 @@
-//
-// Created by burnettes on 4/17/18.
-//
+/*
+ * Author:  Hayden Burnette
+ * Date  :  4/18/2018
+ * Name  :  SafeQueue.cc
+ * Purpose:
+ *      The purpose of SafeQueue.cc
+ *      is to make a queue that can
+ *      be enqueued and dequeue safely.
+ *      SafeQueue achieves this by implementing
+ *      mutex and counting semaphores.
+ *
+ * Modified: 4/25/2018
+ */
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <queue>

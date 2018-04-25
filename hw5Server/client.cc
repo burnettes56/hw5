@@ -1,4 +1,21 @@
-
+/*
+ * Author:  Hayden Burnette
+ * Date  :  4/18/2018
+ * Name  :  client.cc
+ * Purpose:
+ *      The purpose of client.cc
+ *      is to drive the client end
+ *      of our socket program
+ *      Functionality includes:
+ *          -Reading and writing
+ *              command files
+ *          -char processing
+ *          -socket send/receive
+ *          -use of Protected
+ *              SafeQueues
+ *
+ * Modified: 4/25/2018
+ */
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -123,10 +140,10 @@ int main(int argc, char **argv) {
         //  This could be:
         //      value = send(sockdesc, &nextMsg, BUFFERSIZE, 0);
         value = write(sockdesc, (char *) &nextMsg, sizeof(Message));
-        cout << "Client sent Message with key: " << nextMsg.key << endl;
+        cout << "CLIENT HAS SENT MESSAGE WITH KEY: " << nextMsg.key << endl;
         // Get a return message
         value = read(sockdesc, (char *) &nextMsg, sizeof(Message));
-        cout << "***RETURN MESSAGE PAYLOAD IS : " << nextMsg.payload << "is at key " << nextMsg.key << endl;
+        cout << "***RETURN MESSAGE PAYLOAD IS : " << nextMsg.payload << " IS AT KEY " << nextMsg.key << endl;
     } while (nextMsg.command != 'q' && nextMsg.command != 'Q');
     // Close the socket
     close(sockdesc);

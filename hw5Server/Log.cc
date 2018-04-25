@@ -1,8 +1,15 @@
-/*                                          */
-/* Author: Hayden Burnette                  */
-/* Date  : 2/04/2018                        */
-/*                                          */
-/*                                          */
+/*
+ * Author:  Hayden Burnette
+ * Date  :  2/04/2018
+ * Name  :  log.cc
+ * Purpose:
+ *      The purpose of log.cc is to
+ *      create a log file to store
+ *      commands that have been sent
+ *      for processing
+ *
+ * Modified: 4/25/2018
+ */
 
 // Uses C++ string class for convenience
 #include <string>
