@@ -24,6 +24,7 @@ SetupData::SetupData() {
     SetupData::setPathname("");
     SetupData::setSetupfilename("");
 }
+
 /// Class Constructor:
 ///     SetupData(string pname, string sname)
 /// \param string pname
@@ -33,6 +34,7 @@ SetupData::SetupData(string pname, string sname) {
     SetupData::setPathname(pname);
     SetupData::setSetupfilename(sname);
 }
+
 /// sets the class attribute:
 ///     map<string pname,string pname>
 /// \param string pname
@@ -40,11 +42,13 @@ SetupData::SetupData(string pname, string sname) {
 void SetupData::setPathname(string pname) {
     values["pname"] = pname;
 }
+
 /// returns the path's name
 /// \return string
 string SetupData::getPathname() {
     return values["pname"];
 }
+
 /// sets the class attribute:
 ///     map<string sname,string sname>
 ///     which stores setup file's name
@@ -57,11 +61,13 @@ void SetupData::setSetupfilename(string sname) {
         values["sname"] = sname;
     }
 }
+
 /// returns the setup file's name
 /// \return string
 string SetupData::getSetupfilename() {
     return values["sname"];
 }
+
 /// sets the class attribute:
 ///     map<string lname,string lname>
 ///     which stores the log file's name
@@ -70,24 +76,13 @@ string SetupData::getSetupfilename() {
 void SetupData::setLogfile(string lname) {
     values["lname"] = lname;
 }
+
 /// returns the log file's name
 /// \return string
 string SetupData::getLogfilename() {
     return values["lname"];
 }
-/// sets the class attribute:
-///     map<string cname,string cname>
-///     which stores the command file's name
-/// \param string lname
-/// \return void
-void SetupData::setCommandfilename(string cname) {
-    values["cname"] = cname;
-}
-/// returns the command file's name
-/// \return string
-string SetupData::getCommandfilename() {
-    return values["cname"];
-}
+
 /// sets the class attribute:
 ///     map<string uname,string uname>
 ///     which stores the username
@@ -96,22 +91,26 @@ string SetupData::getCommandfilename() {
 void SetupData::setUsername(string uname) {
     values["uname"] = uname;
 }
+
 /// returns the username
 /// \return string
 string SetupData::getUsername() {
     return values["uname"];
 }
+
 /// sets the portNumber from the set up file
 /// \param string port
 /// \return void
 void SetupData::setPortNumber(string port) {
     values["port"] = port;
 }
+
 /// returns the port number
 /// \return string
 string SetupData::getPortNumber() {
     return values["port"];
 }
+
 /// opens a setup file for processing
 /// \return int
 int SetupData::open() {
@@ -127,19 +126,19 @@ int SetupData::open() {
             success = -2;
         }
     } else {
-            //path failed return bad path
-            success = -1;
+        //path failed return bad path
+        success = -1;
     }
     return success;
 }
+
 /// reads a setup file
 ///     and sets logfile,
-///     command file,
-///     username
+///     username,
 ///     and port number attributes
 /// \return void
 void SetupData::read() {
-    string strs[4];
+    string strs[3];
     int count = 0;
     string str;
     string str2;
@@ -158,27 +157,28 @@ void SetupData::read() {
     const char *conv0 = strs[0].c_str();
     SetupData::setLogfile(conv0);
     const char *conv1 = strs[1].c_str();
-    SetupData::setCommandfilename(conv1);
+    SetupData::setUsername(conv1);
     const char *conv2 = strs[2].c_str();
-    SetupData::setUsername(conv2);
-    const char *conv3 = strs[3].c_str();
-    SetupData::setPortNumber(conv3);
+    SetupData::setPortNumber(conv2);
 }
+
 /// prints the SetupData to the screen
 /// \return void
 void SetupData::print() {
     cout << "\nContents of setup file:\n" << endl;
-    cout << "Log file: " << getLogfilename() << endl;
-    cout << "Command file: " << getCommandfilename() << endl;
-    cout << "Username: " << getUsername() << endl;
+    cout << "Log file: " << SetupData::getLogfilename() << endl;
+    cout << "Username: " << SetupData::getUsername() << endl;
+    cout << "Port Number " << SetupData::getPortNumber() << endl;
     cout << "\nEND OF FILE\n" << endl;
 }
+
 /// Closes a setup file
 /// \return void
 void SetupData::close() {
     if (f)
         f.close();
 }
+
 /// returns a string based
 ///     on a error message
 /// \param int e

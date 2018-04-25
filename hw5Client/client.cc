@@ -13,7 +13,9 @@
 #include <queue>
 
 #ifndef SAFEQUEUE_H
+
 #include "SafeQueue.h"
+
 #endif
 
 using namespace std;
@@ -41,16 +43,15 @@ SafeQueue myQueue;
 fstream f;
 
 int main(int argc, char **argv) {
-    //Log *log = new Log();                                                                                //new Log for recording
     char dashP[STRLEN] = "",
             dashS[STRLEN] = "",
-            dashC[STRLEN] = "";                                                   // getopt( ) requires char* arguments
-    char c;                                                                                        // For return value of getopt( )
-    int errorCode;                                                                             //default value
+            dashC[STRLEN] = "",
+            hostname[STRLEN],
+            portnum[STRLEN],
+            dashChar;
+
     struct addrinfo *myinfo;
     int sockdesc;
-    char hostname[BUFFERSIZE + 1];
-    char portnum[BUFFERSIZE + 1];
     Message nextMsg;
     int connection;
     int value;
@@ -61,8 +62,8 @@ int main(int argc, char **argv) {
     } // if
 
     //loop through -p, -s flags
-    while ((c = getopt(argc, argv, "p:s:c:")) != -1) {
-        switch (c) {
+    while ((dashChar = getopt(argc, argv, "p:s:c:")) != -1) {
+        switch (dashChar) {
             case 'p': {
                 strncpy(dashP, optarg, STRLEN - 1);
             }
@@ -90,6 +91,8 @@ int main(int argc, char **argv) {
     // trying to connect to.
     strcpy(portnum, dashP);
 
+    //console buffer
+    cout << "\n\n\n\n";
 
     // Use AF_UNIX for unix pathnames instead
     // Use SOCK_DGRAM for UDP datagrams
@@ -108,31 +111,25 @@ int main(int argc, char **argv) {
     connection = connect(sockdesc, myinfo->ai_addr, myinfo->ai_addrlen);
     if (connection < 0) {
         cout << "Error in connect" << endl;
-        cout << "I could not connect to " << "\'" << dashS << "\'" << "at Port: " << dashP;
+        cout << "I could not connect to " << "\'" << dashS << "\'" << " at Port: " << dashP << endl;
         exit(0);
     } else {
-        cout << "I connected to " << "\'" << dashS << "\'" << "at Port: " << dashP << endl;
+        cout << "I connected to " << "\'" << dashS << "\'" << " at Port: " << dashP << endl;
     }
-    nextMsg = loadMessage();
     // Send a message
-    while (nextMsg.command != 'q' && nextMsg.command != 'Q') {
-        // This could be:
-        //value = send(sockdesc, &nextMsg, BUFFERSIZE, 0);
-        value = write(sockdesc, (char*) &nextMsg, sizeof(Message));
-        cout << "Client sent Message with key: " << nextMsg.key << endl;
-        //cout << "  write returned " << value << endl;
-        // Get a return message
-        value = read(sockdesc, (char*) &nextMsg, sizeof(Message));
-        cout << "Client gets back Message with key: " << nextMsg.key << endl;
-        cout << "NEW PAYLOAD IS : " << nextMsg.payload << endl;
+    do {
         //load the next Message to be sent
         nextMsg = loadMessage();
-    }
-    // Send one last message
-    value = send(sockdesc, &nextMsg, BUFFERSIZE, 0);
+        //  This could be:
+        //      value = send(sockdesc, &nextMsg, BUFFERSIZE, 0);
+        value = write(sockdesc, (char *) &nextMsg, sizeof(Message));
+        cout << "Client sent Message with key: " << nextMsg.key << endl;
+        // Get a return message
+        value = read(sockdesc, (char *) &nextMsg, sizeof(Message));
+        cout << "***RETURN MESSAGE PAYLOAD IS : " << nextMsg.payload << "is at key " << nextMsg.key << endl;
+    } while (nextMsg.command != 'q' && nextMsg.command != 'Q');
     // Close the socket
     close(sockdesc);
-    return 0;
 }
 
 /////////////////////////////////////////////////////////
@@ -149,6 +146,7 @@ void ProcessCommandFile(fstream &f, const char *filename, SafeQueue &msg) {
     ReadCommandFile(f, msg);
     CloseCommandFile(f);
 }
+
 /// Opens a command file for processing
 /// \param fstream &f
 /// \param const char *filename
@@ -156,10 +154,11 @@ void ProcessCommandFile(fstream &f, const char *filename, SafeQueue &msg) {
 void OpenCommandFile(fstream &f, const char *filename) {
     f.open(filename, fstream::in);
     if (!f) {
-        cout << "\nbad command file\n";
+        cout << "\nbad command file\n" << endl;
         exit(0);
     }
 }
+
 /// Read a command file
 ///     and fills a message vector
 /// \param fstream &f
@@ -191,12 +190,18 @@ void ReadCommandFile(fstream &f, SafeQueue &msg) {
         count = 0;
     }
 }
+
 /// closes a command file
 /// \param fstream &f
 /// \return void
 void CloseCommandFile(fstream &f) {
     f.close();
 }
+
+/// loads the next message
+///     from the message queue
+///     for processing
+/// \return Message
 Message loadMessage() {
     return myQueue.Dequeue();
 }

@@ -10,7 +10,7 @@ SafeQueue.o: SafeQueue.cc SafeQueue.h
 	g++ -c SafeQueue.cc
 clean:
 	rm *.o
-	rm -_f hw5Server
+	rm -f hw5Server
 cmake:
 	make clean
 	make
