@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
     strcpy(portnum, dashP);
 
     //console buffer
+    cout << "\n\n\n\n";
 
     // Use AF_UNIX for unix pathnames instead
     // Use SOCK_DGRAM for UDP datagrams
