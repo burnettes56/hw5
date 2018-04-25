@@ -15,13 +15,19 @@
 #include <errno.h>
 
 #ifndef SETUPDATA_H
+
 #include "SetupData.h"
+
 #endif
 #ifndef SAFEQUEUE_H
+
 #include "SafeQueue.h"
+
 #endif
 #ifndef LOG_H
+
 #include "Log.h"
+
 #endif
 
 using namespace std;
@@ -40,6 +46,8 @@ void SendToHandler(Message);
 void ProcessSetupFile(SetupData &);
 
 void CreateHandlers();
+
+bool PutFile(fstream &, const char *, Message &);
 
 void LogStart(Log &, SetupData &);
 
@@ -79,9 +87,10 @@ SetupData *_data;
 
 int main(int argc, char **argv) {
     int sockdesc;
-    char dashP[STRLEN] = "", dashS[STRLEN] = "";
+    char dashP[STRLEN] = "",
+            dashS[STRLEN] = "",
+            portnum[BUFFERSIZE + 1];;
     struct addrinfo *myinfo;
-    char portnum[BUFFERSIZE + 1];
     int connection;
     char c;
 
@@ -173,28 +182,14 @@ int main(int argc, char **argv) {
             pthread_create(&_threads[0], NULL, handleRequest, (void *) &connection);
             cout << "After create" << endl;
         }
+        pthread_join(_threads[0], NULL);
+        exit(0);
     } // for
 }
 /////////////////////////////////////////////////////////
 //                  Pthreads Methods                   //
 /////////////////////////////////////////////////////////
 
-/// Creates a file in based on its file name
-///     returns a bool if successful or not
-/// \param fstream &f
-/// \param const char *filename_ptr
-/// \param Message &msg
-/// \return bool
-bool CreateFile(fstream &f, const char *filename_ptr, Message &msg) {
-    f.open(filename_ptr, fstream::out);
-    if (!f) {
-        cout << "\nCould not create key file\n";
-        return false;
-    }
-    f << msg.payload << endl;
-    f.close();
-    return true;
-}
 /// Method for pthreads to run
 ///      to process a PutStore Command
 /// \param void*
@@ -202,16 +197,18 @@ bool CreateFile(fstream &f, const char *filename_ptr, Message &msg) {
 void *runPutStore(void *) {
     Message m;
     string newPayload;
+    system(string("mkdir \"./" + _data->getUsername() + "\" >> /dev/null 2>&1").c_str());
     while (true) {
         m = _queues[1].Dequeue();
-        if (m.command == 'q' || m.command == 'Q')
+        if (m.command == 'q' || m.command == 'Q') {
             break;
+        }
         cout << "Put Store server has received msg #" << m.id << " key: " << m.key << ", Payload: "
-             << m.payload << endl;;
-        string str = "./keys/" + string(m.key);
+             << m.payload << endl;
+        string str = "./" + _data->getUsername() + "/" + string(m.key);
         const char *k = str.c_str();
-        bool suc = CreateFile(_f, k, m);
-        if (!suc) {
+        bool suc = PutFile(_f, k, m);
+        if (suc) {
             newPayload = "(PUT_STORE) DUPLICATE key: " + string(m.key);
             strcpy(m.payload, newPayload.c_str());
         } else {
@@ -220,9 +217,11 @@ void *runPutStore(void *) {
         }
         _queues[0].Enqueue(m);
     }
-    cout << "Put Store server has received 'quit' command, killing process " << endl;;
+    cout << "Put Store server has received 'quit' command, killing process." << endl;
+    _queues[0].Enqueue(m);
     pthread_exit(0);
 }
+
 /// Method for pthreads to run
 ///      to process a Search Command
 /// \param void*
@@ -233,10 +232,11 @@ void *runSearch(void *) {
     string newPayload;
     while (true) {
         m = _queues[3].Dequeue();
-        if (m.command == 'q' || m.command == 'Q')
+        if (m.command == 'q' || m.command == 'Q') {
             break;
+        }
         cout << "Search server has received msg #" << m.id << " key: " << m.key << ", Payload: " << m.payload << endl;
-        system(string("find ./keys -name '" + string(m.key) + "' >> temp").c_str());
+        system(string("find ./" + _data->getUsername() + "/ -name '" + string(m.key) + "' >> temp").c_str());
         _f.open("temp", fstream::in);
         getline(_f, newPayload);
         system("rm temp");
@@ -245,7 +245,7 @@ void *runSearch(void *) {
             newPayload = "(SEARCH) FILE NOT FOUND WITH KEY: " + string(m.key);
         else {
             //get payload from key
-            _f.open(string("./keys/" + string(m.key)).c_str(), fstream::in);
+            _f.open(string("./" + _data->getUsername() + "/" + string(m.key)).c_str(), fstream::in);
             getline(_f, str);
             _f.close();
             newPayload = "(SEARCH) PAYLOAD AT KEY " + string(m.key) + " IS " + str;
@@ -253,9 +253,11 @@ void *runSearch(void *) {
         strcpy(m.payload, newPayload.c_str());
         _queues[0].Enqueue(m);
     }
-    cout << "Search server has received 'quit' command, killing process." << endl;;
+    cout << "Search server has received 'quit' command, killing process." << endl;
+    _queues[0].Enqueue(m);
     pthread_exit(0);
 }
+
 /// Method for pthreads to run
 ///      to process a Number Command
 /// \param void*
@@ -265,21 +267,24 @@ void *runNumber(void *) {
     string newPayload;
     while (true) {
         m = _queues[2].Dequeue();
-        if (m.command == 'q' || m.command == 'Q')
+        if (m.command == 'q' || m.command == 'Q') {
             break;
+        }
         cout << "Number server has received msg #" << m.id << " key: " << m.key << ", Payload: " << m.payload << endl;
-        system("ls ./keys | wc -l >> temp");
+        system(string("ls ./" + _data->getUsername() + "/ | wc -l >> temp").c_str());
         _f.open("temp", fstream::in);
         getline(_f, newPayload);
         newPayload = "(NUMBER) THE NUMBER OF FILES STORED IS " + newPayload;
         strcpy(m.payload, newPayload.c_str());
         _f.close();
-        system("rm temp");
+        system("rm temp >> /dev/null 2>&1");
         _queues[0].Enqueue(m);
     }
     cout << "Number server has received 'quit' command, killing process." << endl;
+    _queues[0].Enqueue(m);
     pthread_exit(0);
 }
+
 /// Handles all return messages and
 ///     and sends messages back to
 ///     client
@@ -288,12 +293,21 @@ void *runNumber(void *) {
 void *runReturn(void *arg) {
     Message m;
     int connection = *((int *) arg);
-    while (m.command != 'q' && m.command != 'Q') {
+    int count = 0;
+    while (true) {
         m = _queues[0].Dequeue();
-        write(connection, (char*)&m, sizeof(Message));
-        cout << "Return server send back Message with ID: " << m.id << "\n" << endl;
+        if (m.command == 'q' || m.command == 'Q') {
+            count++;
+            if (count == 3)
+                break;
+        } else {
+            cout << "Return server has sent message with ID: " << m.id << " back to the the client \n" << endl;
+            write(connection, (char *) &m, sizeof(Message));
+        }
     }
-    cout << "Return server has received 'quit' command, killing process." << endl;
+    cout << "Return server has received final 'quit' command, killing process. Sending Confirmation to Client." << endl;
+    strcpy(m.payload, "Quit command has been processed by all servers.");
+    write(connection, (char *) &m, sizeof(Message));
     //send last exit payload
     pthread_exit(0);
 }
@@ -312,8 +326,9 @@ void *handleRequest(void *arg) {
     cout << "Server thread, connection = " << connection << endl;
 
     //screen buffer
-    cout << "\n\nStarting Command Processor...\n";
-    cout << "Spinning Command Threads...\n\n";
+    cout << "\n\nDeploying Command Handler...\n";
+    cout << "Deploying Command Processors...\n";
+    cout << "Deploying Command Logger...\n\n\n";
 
     /////////////////////////////////////////////
     //     Child Code/Logger Thread Handler    //
@@ -334,7 +349,7 @@ void *handleRequest(void *arg) {
             LogCommand(msgFromServer, *_log);
         }
         //q or Q has been received so quit and close pipe
-        cout << "Log server has received 'quit' command, killing process " << endl;
+        cout << "Log server has received 'quit' command, killing process." << endl;
         close(_pipeLogger[0]);
         close(_pipeLogger[1]);
         LogEnd(*_log);
@@ -383,16 +398,16 @@ void *handleRequest(void *arg) {
             cout << "Server received Message with ID: " << msgFromServer.id << " Sending to Command Processor." << endl;
             SendToHandler(msgFromServer);
         } // while
-        // Close the socket
-
-        close(connection);
-        pthread_join(_threads[1], NULL);
-        pthread_join(_threads[2], NULL);
-        pthread_join(_threads[3], NULL);
-        pthread_join(_threads[4], NULL);
+        //wait for command threads to close then close the connection
     }
+    pthread_join(_threads[1], NULL);
+    pthread_join(_threads[2], NULL);
+    pthread_join(_threads[3], NULL);
+    pthread_join(_threads[4], NULL);
     wait(&forkMe);
-    cout << "\n\nwe ended\n" << endl;
+    // Close the socket
+    close(connection);
+    cout << "\n\nConnection has been terminated with client at Port " + _data->getPortNumber() + "\n\n" << endl;
     pthread_exit(0);
 }
 
@@ -407,6 +422,7 @@ void CreateHandlers() {
     pthread_create(&_threads[3], NULL, runNumber, NULL);                           //initialize number thread
     pthread_create(&_threads[4], NULL, runSearch, NULL);                           //initialize search thread
 }
+
 /// Sends a message to the
 ///     correct server for
 ///     processing
@@ -420,21 +436,21 @@ void SendToHandler(Message msg) {
         case 'P':
         case 'p': {
             _queues[1].Enqueue(msg);
-            cout << "We sent putstore a commmand to process" << endl;
+            cout << "Command Handler sent putStore Server a command to process." << endl;
         }
             break;
             //send message to search server
         case 'S':
         case 's': {
             _queues[3].Enqueue(msg);
-            cout << "We sent search a commmand to process" << endl;
+            cout << "Command Handler sent Search Server a command to process." << endl;
         }
             break;
             //send message to put number server
         case 'N':
         case 'n': {
             _queues[2].Enqueue(msg);
-            cout << "We sent number a commmand to process" << endl;
+            cout << "Command Handler sent Number Server a command to process." << endl;
         }
             break;
             //tell all processes to quit
@@ -450,11 +466,30 @@ void SendToHandler(Message msg) {
             //if the command read is invalid, it just skips it
         default: {
             cout << "\n\'" << msg.command << "\'"
-                 << " IS NOT A ACCEPTED. (ACCEPTED VALUES: p(put_Store), n(number), s(search), q(quit))";
+                 << " IS NOT A ACCEPTED. (  ACCEPTED VALUES: p(put_Store), n(number), s(search), q(quit)  )";
         }
             break;
     }
 }
+
+/// Creates a file in based on its file name
+///     returns a bool if successful or not
+/// \param fstream &f
+/// \param const char *filename_ptr
+/// \param Message &msg
+/// \return bool
+bool PutFile(fstream &f, const char *filename_ptr, Message &msg) {
+    f.open(filename_ptr, fstream::out);
+    if (!f) {
+        cout << "\nCould not create key file\n";
+        return false;
+    }
+
+    f << msg.payload << endl;
+    f.close();
+    return true;
+}
+
 /// Processes a setup file
 /// \param SetupData &data
 /// \param Log &log
@@ -484,9 +519,16 @@ void PrintError(int &e, SetupData &setup) {
     cout << "Error Code: " << errorCode << endl;
 }
 
-//
-//opens the log file for logging
-//
+/// Write to a log file
+///     a start message
+/// Includes:
+///     A START indicator
+///     Log file
+///     Username
+///     Port Number
+/// \param Log &l
+/// \param SetupData &s
+/// \return void
 void LogStart(Log &l, SetupData &s) {
     int success = l.open();
     if (success != 0) {
@@ -494,17 +536,17 @@ void LogStart(Log &l, SetupData &s) {
         exit(0);
     } else {
         string stringData =
-                "\nLog File: " + s.getLogfilename()
-                + "\nCommand File : " + s.getCommandfilename()
-                + "\nUsername: " + s.getUsername()
-                + "\nPort Number: " + s.getPortNumber();
+                "\nLog File: " + s.getLogfilename() +
+                "\nUsername: " + s.getUsername() +
+                "\nPort Number: " + s.getPortNumber();
         l.writeLogRecord(stringData);
     }
 }
 
-//
-//log command file data
-//
+///
+/// \param Message m
+/// \param Log &l
+/// \return void
 void LogCommand(Message m, Log &l) {
     string stringData =
             string("\nCommand: ") + m.command
@@ -513,7 +555,10 @@ void LogCommand(Message m, Log &l) {
     l.writeLogRecord(stringData);
 }
 
-/// initializes all pipes for message sending
+/// initializes all pipes
+///     for message sending
+///     received messages to
+///     the logger
 /// \return void
 void initializePipes() {
     if (pipe(_pipeLogger) == -1) {
@@ -521,9 +566,14 @@ void initializePipes() {
         exit(0);
     }
 }
-//
-//closes the log file
-//
+
+/// Writes to a log file to indicate
+///     that we are done processing
+/// Includes:
+///     A time stamp
+///     END indicator
+/// \param Log &l
+/// \return void
 void LogEnd(Log &l) {
     int success = l.close();
     if (success != 0) {

@@ -27,8 +27,6 @@ public:
   string getSetupfilename();
   void setLogfile(string lname);
   string getLogfilename();
-  void setCommandfilename(string cname);
-  string getCommandfilename();
   void setUsername(string uname);
   string getUsername();
   void setPortNumber(string port);
