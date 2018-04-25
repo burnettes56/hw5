@@ -1,3 +1,4 @@
+all: hw5Client hw5Server
 hw5Client: hw5Client.o SafeQueue.o
 	g++ hw5Client.o SafeQueue.o -lpthread -o hw5Client
 hw5Client.o: hw5Client.cc SafeQueue.h

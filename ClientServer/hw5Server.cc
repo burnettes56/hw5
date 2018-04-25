@@ -346,6 +346,7 @@ void *handleRequest(void *arg) {
     //screen buffer
     cout << "\n\nDeploying Command Handler...\n";
     cout << "Deploying Command Processors...\n";
+    cout << "Deploying Return Message Server...\n";
     cout << "Deploying Command Logger...\n\n\n";
 
     /////////////////////////////////////////////
