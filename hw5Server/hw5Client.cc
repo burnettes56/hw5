@@ -1,7 +1,7 @@
 /*
  * Author:  Hayden Burnette
  * Date  :  4/18/2018
- * Name  :  client.cc
+ * Name  :  hw5Client.cc
  * Purpose:
  *      The purpose of client.cc
  *      is to drive the client end
