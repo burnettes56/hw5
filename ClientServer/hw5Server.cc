@@ -1,7 +1,7 @@
 /*
  * Author:  Hayden Burnette
  * Date  :  4/18/2018
- * Name  :  hw5Server.cc
+ * Name  :  ClientServer.cc
  * Purpose:
  *      The purpose of server.cc is to
  *      drive the server end of our
